@@ -1,69 +1,72 @@
-# Welcome to your Lovable project
+# Web Accessibility Analyzer
 
-## Project info
+## Overview
+This project is a web application that analyzes websites for accessibility compliance with WCAG guidelines. It provides detailed feedback and recommendations for improving website accessibility.
 
-**URL**: https://lovable.dev/projects/c4ae3a77-b5a0-4d9a-b072-709412c5c1f9
+## Features
+- **URL Analysis**: Users can input any website URL for accessibility analysis
+- **Accessibility Score**: Displays a numerical score (0-100) representing the website's overall accessibility
+- **Detailed Issue Reports**: Lists all detected accessibility issues with:
+  - Severity level (critical, serious, moderate, minor)
+  - Impact description
+  - Specific recommendations for fixes
+  - Affected HTML elements
+  - WCAG criterion references
 
-## How can I edit this code?
+## Technical Stack
+- Frontend:
+  - React with TypeScript
+  - Tailwind CSS for styling
+  - shadcn/ui for UI components
+  - Tanstack Query for data fetching
+  - React Circular Progressbar for score visualization
 
-There are several ways of editing your application.
+- Backend:
+  - Supabase for database and serverless functions
+  - Edge Functions for accessibility analysis
+  - axe-core for accessibility testing
 
-**Use Lovable**
+## Core Components
+1. **URLInput**: Handles website URL submission and validation
+2. **AccessibilityScore**: Displays the accessibility score with a circular progress bar
+3. **IssuesList**: Renders detailed accessibility issues with severity indicators
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c4ae3a77-b5a0-4d9a-b072-709412c5c1f9) and start prompting.
+## Database Schema
+### Tables
+1. `accessibility_scans`:
+   - Stores scan results with score and timestamps
+   - Fields: id, url, score, created_at, completed_at
 
-Changes made via Lovable will be committed automatically to this repo.
+2. `accessibility_issues`:
+   - Stores detailed accessibility issues found
+   - Fields: id, scan_id, severity, message, impact, recommendation, html_element, wcag_criterion
 
-**Use your preferred IDE**
+## Edge Function
+The `analyze-accessibility` function:
+1. Receives a URL and scan ID
+2. Uses Puppeteer to load the target website
+3. Runs axe-core accessibility tests
+4. Calculates an overall accessibility score
+5. Stores results in Supabase database
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## How It Works
+1. User enters a website URL
+2. System creates a new scan record
+3. Edge function analyzes the website using axe-core
+4. Results are stored in database
+5. UI updates in real-time to show:
+   - Overall accessibility score
+   - Detailed list of issues
+   - Recommendations for improvements
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Future Enhancements
+- PDF report generation
+- Historical scan comparisons
+- Detailed WCAG compliance breakdown
+- Custom accessibility rule configurations
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/c4ae3a77-b5a0-4d9a-b072-709412c5c1f9) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## Technical Notes
+- Uses real-time database subscriptions for live updates
+- Implements CORS handling for cross-origin requests
+- Includes error handling and loading states
+- Responsive design for all screen sizes
