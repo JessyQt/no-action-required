@@ -16,22 +16,22 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentScanId, setCurrentScanId] = useState<string | null>(null);
 
-  const { data: results } = useQuery<ScanResult>({
+  const { data: results, isLoading: queryLoading } = useQuery<ScanResult>({
     queryKey: ["scan-results", currentScanId],
     queryFn: async () => {
       if (!currentScanId) return { score: 0, issues: [] };
-
+  
       const { data: scan } = await supabase
         .from("accessibility_scans")
         .select()
         .eq("id", currentScanId)
         .single();
-
+  
       const { data: issues } = await supabase
         .from("accessibility_issues")
         .select()
         .eq("scan_id", currentScanId);
-
+  
       return {
         score: scan?.score || 0,
         issues: issues || [],
@@ -39,34 +39,35 @@ const Index = () => {
     },
     enabled: !!currentScanId,
     refetchInterval: (data) => {
+      // Only refetch if we haven't received a score yet
       return !data || data.score === 0 ? 2000 : false;
     },
   });
-
+  
   const handleAnalyze = async (url: string) => {
     try {
       setIsLoading(true);
       console.log("Starting analysis for URL:", url);
-
+  
       const { data: scan, error: scanError } = await supabase
         .from("accessibility_scans")
         .insert({ url, score: 0 })
         .select()
         .single();
-
+  
       if (scanError) throw scanError;
       console.log("Created scan record:", scan);
-
+  
       setCurrentScanId(scan.id);
-
+  
       const { error } = await supabase.functions.invoke("analyze-accessibility", {
         body: { url, scanId: scan.id },
       });
-
+  
       if (error) {
         throw error;
       }
-
+  
       toast.success("Analysis started! Results will appear shortly.");
     } catch (error) {
       console.error("Error analyzing website:", error);
@@ -75,11 +76,7 @@ const Index = () => {
       setIsLoading(false);
     }
   };
-
-  const handleDownloadPDF = () => {
-    toast.info("PDF download feature coming soon!");
-  };
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container py-8">
@@ -92,9 +89,9 @@ const Index = () => {
             Get instant feedback and recommendations for improvement.
           </p>
         </div>
-
+  
         <URLInput onAnalyze={handleAnalyze} isLoading={isLoading} />
-
+  
         {results && (
           <div className="mt-12 animate-fade-in">
             <div className="max-w-4xl mx-auto">
@@ -104,7 +101,7 @@ const Index = () => {
                 </h2>
                 <AccessibilityScore score={results.score} />
               </div>
-
+  
               {results.issues && results.issues.length > 0 && (
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <div className="flex justify-between items-center mb-6">
@@ -122,6 +119,4 @@ const Index = () => {
       </div>
     </div>
   );
-};
-
-export default Index;
+  
