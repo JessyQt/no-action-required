@@ -5,15 +5,15 @@ import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "*",
   "Content-Type": "application/json",
 };
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response("ok", { 
-      status: 200,
+    return new Response(null, { 
+      status: 204,
       headers: corsHeaders 
     });
   }
@@ -27,18 +27,39 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+    const browser = await puppeteer.launch({
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu"
+      ],
+      headless: true,
+    });
 
     try {
-      await page.goto(url, { waitUntil: "networkidle2" });
+      const page = await browser.newPage();
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+      
+      console.log("Navigating to URL:", url);
+      await page.goto(url, { 
+        waitUntil: "networkidle0",
+        timeout: 30000 
+      });
 
-      // Inject axe-core into the page
-      await page.addScriptTag({ path: "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js" });
+      // Inject axe-core
+      await page.addScriptTag({ 
+        url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js'
+      });
 
-      // Run accessibility analysis using axe-core
+      // Run accessibility analysis
       const results = await page.evaluate(() => {
-        return window.axe.run();
+        return window.axe.run(document, {
+          runOnly: {
+            type: "tag",
+            values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]
+          }
+        });
       });
 
       console.log("Analysis complete. Violations found:", results.violations.length);
@@ -50,20 +71,16 @@ serve(async (req) => {
         maxScore - results.violations.length * deductPerViolation
       );
 
-      // Update the scan record in Supabase
-      try {
-        await supabaseClient
-          .from("accessibility_scans")
-          .update({ 
-            score,
-            completed_at: new Date().toISOString()
-          })
-          .eq("id", scanId);
-      } catch (dbError) {
-        console.error("Error updating scan record in Supabase:", dbError);
-      }
+      // Update scan record
+      await supabaseClient
+        .from("accessibility_scans")
+        .update({ 
+          score,
+          completed_at: new Date().toISOString()
+        })
+        .eq("id", scanId);
 
-      // Save violations in Supabase
+      // Save violations
       if (results.violations.length > 0) {
         const issues = results.violations.map((violation) => ({
           scan_id: scanId,
@@ -75,11 +92,9 @@ serve(async (req) => {
           html_element: violation.nodes[0]?.html || null,
         }));
 
-        try {
-          await supabaseClient.from("accessibility_issues").insert(issues);
-        } catch (dbError) {
-          console.error("Error inserting issues in Supabase:", dbError);
-        }
+        await supabaseClient
+          .from("accessibility_issues")
+          .insert(issues);
       }
 
       return new Response(
@@ -101,7 +116,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in analyze-accessibility:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
       { 
         status: 500,
         headers: corsHeaders 

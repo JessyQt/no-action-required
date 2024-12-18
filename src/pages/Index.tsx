@@ -39,7 +39,6 @@ const Index = () => {
     },
     enabled: !!currentScanId,
     refetchInterval: (data) => {
-      // Only refetch if we haven't received a score yet
       return !data || data.score === 0 ? 2000 : false;
     },
   });
