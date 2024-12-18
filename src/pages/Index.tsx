@@ -39,17 +39,16 @@ const Index = () => {
     },
     enabled: !!currentScanId,
     refetchInterval: (data) => {
-      // Refetch until scan is complete
-      if (data?.score) return false;
-      return 2000;
+      if (!data) return 2000;
+      return data.score ? false : 2000;
     },
   });
 
   const handleAnalyze = async (url: string) => {
     try {
       setIsLoading(true);
+      console.log("Starting analysis for URL:", url);
 
-      // Create a new scan record
       const { data: scan, error: scanError } = await supabase
         .from("accessibility_scans")
         .insert({ url, score: 0 })
@@ -57,10 +56,10 @@ const Index = () => {
         .single();
 
       if (scanError) throw scanError;
+      console.log("Created scan record:", scan);
 
       setCurrentScanId(scan.id);
 
-      // Call the edge function to perform the analysis
       const { error } = await supabase.functions.invoke("analyze-accessibility", {
         body: { url, scanId: scan.id },
       });

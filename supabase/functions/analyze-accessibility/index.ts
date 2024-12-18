@@ -5,16 +5,19 @@ import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const { url, scanId } = await req.json();
+    console.log("Analyzing URL:", url);
 
     // Create Supabase client
     const supabaseClient = createClient(
@@ -34,8 +37,23 @@ serve(async (req) => {
       throw new Error("Failed to parse HTML");
     }
 
+    // Configure axe for server-side environment
+    const config = {
+      rules: [
+        { id: "color-contrast", enabled: true },
+        { id: "image-alt", enabled: true },
+        { id: "label", enabled: true },
+        { id: "link-name", enabled: true },
+      ],
+      checks: [
+        { id: "color-contrast", options: { noScroll: true } },
+      ],
+      resultTypes: ["violations"],
+    };
+
     // Run accessibility analysis
-    const results = await axe.run(document as any);
+    const results = await axe.run(document.documentElement, config);
+    console.log("Analysis results:", results);
 
     // Calculate score based on violations
     const maxScore = 100;
@@ -79,7 +97,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in analyze-accessibility:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
