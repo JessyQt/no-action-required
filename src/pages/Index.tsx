@@ -40,7 +40,7 @@ const Index = () => {
     enabled: !!currentScanId,
     refetchInterval: (data) => {
       if (!data) return 2000;
-      return data.score ? false : 2000;
+      return data.score > 0 ? false : 2000;
     },
   });
 
@@ -62,6 +62,9 @@ const Index = () => {
 
       const { error } = await supabase.functions.invoke("analyze-accessibility", {
         body: { url, scanId: scan.id },
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (error) {
