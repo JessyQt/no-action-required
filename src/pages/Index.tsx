@@ -40,7 +40,7 @@ const Index = () => {
     enabled: !!currentScanId,
     refetchInterval: (data) => {
       if (!data) return 2000;
-      return data.score > 0 ? false : 2000;
+      return data?.score > 0 ? false : 2000;
     },
   });
 

@@ -11,8 +11,12 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { 
+      status: 200,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -34,18 +38,21 @@ serve(async (req) => {
       throw new Error("Failed to parse HTML");
     }
 
+    // Configure axe for server environment
     const config = {
       rules: [
-        { id: "color-contrast", enabled: true },
+        { id: "color-contrast", enabled: false }, // Disable color contrast check as it requires browser APIs
         { id: "image-alt", enabled: true },
         { id: "label", enabled: true },
         { id: "link-name", enabled: true },
       ],
-      checks: [
-        { id: "color-contrast", options: { noScroll: true } },
-      ],
       resultTypes: ["violations"],
       elementRef: false,
+      noHtml: true, // Prevent axe from trying to access HTML elements directly
+      runOnly: {
+        type: "rule",
+        values: ["image-alt", "label", "link-name"]
+      }
     };
 
     console.log("Running axe analysis...");
@@ -82,8 +89,15 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, score, violations: results.violations.length }),
-      { headers: corsHeaders }
+      JSON.stringify({ 
+        success: true, 
+        score, 
+        violations: results.violations.length 
+      }),
+      { 
+        status: 200,
+        headers: corsHeaders 
+      }
     );
   } catch (error) {
     console.error("Error in analyze-accessibility:", error);
