@@ -12,21 +12,18 @@ export async function interpretAccessibilityResults(scanResult: any) {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
-      Actúa como un experto en accesibilidad web y analiza los siguientes resultados de un escaneo:
+      Analiza el siguiente problema de accesibilidad web y proporciona un análisis detallado:
       
-      Puntuación: ${scanResult.score}/100
-      
-      Problemas encontrados:
-      ${scanResult.issues.map((issue: any) => 
-        `- ${issue.title} (Severidad: ${issue.severity})`
-      ).join('\n')}
+      Problema: ${scanResult.issues[0].title}
+      Severidad: ${scanResult.issues[0].severity}
       
       Por favor, proporciona:
-      1. Una explicación clara y concisa del estado general de accesibilidad
-      2. Los principales problemas encontrados y su impacto en usuarios reales
-      3. Recomendaciones prioritarias para mejorar
+      1. Impacto específico en usuarios con discapacidades
+      2. Consecuencias prácticas para la experiencia del usuario
+      3. Mejores prácticas para solucionar este problema
       
-      Responde en español, usando un lenguaje claro y fácil de entender.
+      Responde en español, usando un lenguaje claro y profesional. NO repitas la puntuación general ni el resumen del sitio, 
+      céntrate solo en analizar este problema específico.
     `;
 
     const result = await model.generateContent(prompt);

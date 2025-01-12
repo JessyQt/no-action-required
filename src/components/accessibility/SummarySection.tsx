@@ -60,7 +60,7 @@ export function SummarySection({ data }: SummarySectionProps) {
                     <AlertTriangle className="h-4 w-4 text-warning" />
                     <span>Media Severidad</span>
                   </div>
-                  <Badge variant="warning">{data.summary.medium}</Badge>
+                  <Badge variant="secondary">{data.summary.medium}</Badge>
                 </div>
               )}
               {data.summary.low > 0 && (
@@ -69,7 +69,7 @@ export function SummarySection({ data }: SummarySectionProps) {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                     <span>Baja Severidad</span>
                   </div>
-                  <Badge variant="secondary">{data.summary.low}</Badge>
+                  <Badge variant="outline">{data.summary.low}</Badge>
                 </div>
               )}
             </div>
