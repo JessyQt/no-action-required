@@ -1,122 +1,65 @@
 import { useState } from "react";
-import { URLInput } from "@/components/URLInput";
-import { AccessibilityScore } from "@/components/AccessibilityScore";
-import { IssuesList, Issue } from "@/components/IssuesList";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { ScanForm } from "@/components/ScanForm";
+import { ResultsDashboard } from "@/components/ResultsDashboard";
+import { DocumentAnalyzer } from "@/components/DocumentAnalyzer";
+import type { ScanResult } from "@/lib/types";
+import { accessibilityApi } from "@/lib/api/accessibilityApi";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 
-interface ScanResult {
-  score: number;
-  issues: Issue[];
-}
+export default function Index() {
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const { toast } = useToast();
 
-const Index = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
-
-  const { data: results, isLoading: queryLoading } = useQuery<ScanResult>({
-    queryKey: ["scan-results", currentScanId],
-    queryFn: async () => {
-      if (!currentScanId) return { score: 0, issues: [] };
-  
-      const { data: scan } = await supabase
-        .from("accessibility_scans")
-        .select()
-        .eq("id", currentScanId)
-        .single();
-  
-      const { data: issues } = await supabase
-        .from("accessibility_issues")
-        .select()
-        .eq("scan_id", currentScanId);
-  
-      return {
-        score: scan?.score || 0,
-        issues: issues || [],
-      };
+  const { mutate: analyzeSite, isPending: isLoading } = useMutation({
+    mutationFn: (url: string) => accessibilityApi.analyzeSite(url),
+    onSuccess: (scanResult) => {
+      setResult(scanResult);
+      toast({
+        title: "Análisis completado",
+        description: `Puntuación de accesibilidad: ${scanResult.score}/100`,
+      });
     },
-    enabled: !!currentScanId,
-    refetchInterval: (data) => {
-      // Only refetch if we haven't received a score yet
-      return !data || data.score === 0 ? 2000 : false;
+    onError: (error) => {
+      console.error("Error al analizar el sitio:", error);
+      toast({
+        title: "Error al analizar el sitio",
+        description: "Por favor verifica la URL e intenta nuevamente.",
+        variant: "destructive",
+      });
     },
   });
-  
-  const handleAnalyze = async (url: string) => {
-    try {
-      setIsLoading(true);
-      console.log("Starting analysis for URL:", url);
-  
-      const { data: scan, error: scanError } = await supabase
-        .from("accessibility_scans")
-        .insert({ url, score: 0 })
-        .select()
-        .single();
-  
-      if (scanError) throw scanError;
-      console.log("Created scan record:", scan);
-  
-      setCurrentScanId(scan.id);
-  
-      const { error } = await supabase.functions.invoke("analyze-accessibility", {
-        body: { url, scanId: scan.id },
-      });
-  
-      if (error) {
-        throw error;
-      }
-  
-      toast.success("Analysis started! Results will appear shortly.");
-    } catch (error) {
-      console.error("Error analyzing website:", error);
-      toast.error("Failed to analyze website. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-4">
-            Web Accessibility Analyzer
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Check your website's accessibility compliance with WCAG guidelines.
-            Get instant feedback and recommendations for improvement.
-          </p>
-        </div>
-  
-        <URLInput onAnalyze={handleAnalyze} isLoading={isLoading} />
-  
-        {results && (
-          <div className="mt-12 animate-fade-in">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-                <h2 className="text-2xl font-semibold text-center mb-6">
-                  Accessibility Score
-                </h2>
-                <AccessibilityScore score={results.score} />
-              </div>
-  
-              {results.issues && results.issues.length > 0 && (
-                <div className="bg-white rounded-lg shadow-lg p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-semibold">Issues Found</h2>
-                    <Button onClick={handleDownloadPDF}>
-                      Download PDF Report
-                    </Button>
-                  </div>
-                  <IssuesList issues={results.issues} />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+    <div className="space-y-8 sm:space-y-12 max-w-7xl mx-auto w-full animate-fade-in">
+      <div className="text-center space-y-4">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
+          Escáner de Accesibilidad
+        </h1>
+        <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
+          Analiza la accesibilidad de tu sitio web o documento y obtén recomendaciones basadas en WCAG.
+        </p>
       </div>
+
+      <Card className="p-6 sm:p-8">
+        <Tabs defaultValue="website" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="website">Sitio Web</TabsTrigger>
+            <TabsTrigger value="document">Documento</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="website" className="space-y-8">
+            <ScanForm onScan={analyzeSite} isLoading={isLoading} />
+            {result && <ResultsDashboard data={result} />}
+          </TabsContent>
+          
+          <TabsContent value="document">
+            <DocumentAnalyzer />
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   );
-  
+}
