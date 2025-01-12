@@ -1,72 +1,48 @@
-# Web Accessibility Analyzer
+# Proyecto de Accesibilidad Web
 
-## Overview
-This project is a web application that analyzes websites for accessibility compliance with WCAG guidelines. It provides detailed feedback and recommendations for improving website accessibility.
+## Información del proyecto
 
-## Features
-- **URL Analysis**: Users can input any website URL for accessibility analysis
-- **Accessibility Score**: Displays a numerical score (0-100) representing the website's overall accessibility
-- **Detailed Issue Reports**: Lists all detected accessibility issues with:
-  - Severity level (critical, serious, moderate, minor)
-  - Impact description
-  - Specific recommendations for fixes
-  - Affected HTML elements
-  - WCAG criterion references
+Este proyecto es una aplicación web diseñada para analizar sitios web en busca de problemas de accesibilidad y proporcionar recomendaciones basadas en las pautas WCAG.
 
-## Technical Stack
-- Frontend:
-  - React with TypeScript
-  - Tailwind CSS for styling
-  - shadcn/ui for UI components
-  - Tanstack Query for data fetching
-  - React Circular Progressbar for score visualization
+## ¿Qué hace este proyecto?
 
-- Backend:
-  - Supabase for database and serverless functions
-  - Edge Functions for accessibility analysis
-  - axe-core for accessibility testing
+Este proyecto incluye varias funcionalidades, tales como:
 
-## Core Components
-1. **URLInput**: Handles website URL submission and validation
-2. **AccessibilityScore**: Displays the accessibility score with a circular progress bar
-3. **IssuesList**: Renders detailed accessibility issues with severity indicators
+- **Lista de Issues**: Una lista de problemas o tareas pendientes.
+- **Descarga de Reportes**: Funcionalidad para descargar reportes en diferentes formatos.
+- **Dashboard de Resultados**: Un panel que muestra los resultados de diferentes métricas.
+- **Formulario de Escaneo**: Un formulario para iniciar escaneos o análisis.
+- **Gráfico de Severidad**: Un gráfico que muestra la severidad de diferentes problemas.
+- **Proveedor de Temas**: Un componente para manejar los temas de la aplicación.
+- **Toggle de Tema**: Un interruptor para cambiar entre temas claro y oscuro.
 
-## Database Schema
-### Tables
-1. `accessibility_scans`:
-   - Stores scan results with score and timestamps
-   - Fields: id, url, score, created_at, completed_at
+## Tecnologías utilizadas
 
-2. `accessibility_issues`:
-   - Stores detailed accessibility issues found
-   - Fields: id, scan_id, severity, message, impact, recommendation, html_element, wcag_criterion
+Este proyecto está construido con:
 
-## Edge Function
-The `analyze-accessibility` function:
-1. Receives a URL and scan ID
-2. Uses Puppeteer to load the target website
-3. Runs axe-core accessibility tests
-4. Calculates an overall accessibility score
-5. Stores results in Supabase database
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-## How It Works
-1. User enters a website URL
-2. System creates a new scan record
-3. Edge function analyzes the website using axe-core
-4. Results are stored in database
-5. UI updates in real-time to show:
-   - Overall accessibility score
-   - Detailed list of issues
-   - Recommendations for improvements
+## ¿Cómo puedo editar este código?
 
-## Future Enhancements
-- PDF report generation
-- Historical scan comparisons
-- Detailed WCAG compliance breakdown
-- Custom accessibility rule configurations
+Puedes trabajar localmente usando tu propio IDE. Para ello, clona este repositorio y empuja los cambios.
 
-## Technical Notes
-- Uses real-time database subscriptions for live updates
-- Implements CORS handling for cross-origin requests
-- Includes error handling and loading states
-- Responsive design for all screen sizes
+El único requisito es tener Node.js y npm instalados - [instalar con nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+Sigue estos pasos:
+
+```sh
+# Paso 1: Clona el repositorio usando la URL del proyecto.
+git clone <YOUR_GIT_URL>
+
+# Paso 2: Navega al directorio del proyecto.
+cd <YOUR_PROJECT_NAME>
+
+# Paso 3: Instala las dependencias necesarias.
+npm i
+
+# Paso 4: Inicia el servidor de desarrollo con recarga automática y vista previa instantánea.
+npm run dev
