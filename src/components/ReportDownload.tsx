@@ -8,131 +8,124 @@ interface ReportDownloadProps {
 }
 
 export function ReportDownload({ data }: ReportDownloadProps) {
-  const handleDownload = () => {
+  const generatePDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const margin = 20;
     let yPosition = 20;
 
     // Configuración de estilos
-    const titleSize = 20;
-    const subtitleSize = 16;
-    const normalSize = 12;
-    const smallSize = 10;
-    const lineHeight = 8;
-    const sectionSpacing = 15;
-
-    // Función helper para centrar texto
-    const centerText = (text: string, y: number, size: number) => {
-      doc.setFontSize(size);
-      const textWidth = doc.getTextWidth(text);
-      const x = (pageWidth - textWidth) / 2;
-      doc.text(text, x, y);
-      return y + lineHeight;
+    const styles = {
+      title: { size: 20, spacing: 10 },
+      subtitle: { size: 16, spacing: 8 },
+      normal: { size: 12, spacing: 6 },
+      small: { size: 10, spacing: 5 }
     };
 
-    // Función helper para añadir texto con salto de línea automático
-    const addWrappedText = (text: string, y: number, fontSize = normalSize) => {
-      doc.setFontSize(fontSize);
-      const textLines = doc.splitTextToSize(text, pageWidth - 2 * margin);
-      doc.text(textLines, margin, y);
-      return y + (textLines.length * lineHeight);
+    // Helper para añadir texto con formato
+    const addText = (text: string, style: keyof typeof styles, isCenter = false) => {
+      doc.setFontSize(styles[style].size);
+      if (isCenter) {
+        const textWidth = doc.getTextWidth(text);
+        doc.text(text, (pageWidth - textWidth) / 2, yPosition);
+      } else {
+        doc.text(text, margin, yPosition);
+      }
+      yPosition += styles[style].spacing;
+    };
+
+    // Helper para añadir texto con salto de línea
+    const addParagraph = (text: string, style: keyof typeof styles) => {
+      doc.setFontSize(styles[style].size);
+      const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
+      doc.text(lines, margin, yPosition);
+      yPosition += lines.length * styles[style].spacing;
     };
 
     // Título y fecha
-    const currentDate = new Date().toLocaleDateString('es-ES', {
+    const date = new Date().toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-
-    yPosition = centerText("Reporte de Accesibilidad Web", yPosition, titleSize);
-    yPosition += 5;
-    yPosition = centerText(currentDate, yPosition, smallSize);
-    yPosition += sectionSpacing;
-
-    // Puntuación Global
-    doc.setFontSize(subtitleSize);
-    doc.setFont(undefined, 'bold');
-    yPosition = addWrappedText("Puntuación de Accesibilidad", yPosition);
-    yPosition += 5;
-    doc.setFont(undefined, 'normal');
-    yPosition = addWrappedText(`${data.score}/100`, yPosition, titleSize);
-    yPosition += sectionSpacing;
-
-    // Resumen de Problemas
-    doc.setFont(undefined, 'bold');
-    yPosition = addWrappedText("Resumen de Problemas Encontrados", yPosition, subtitleSize);
-    yPosition += 5;
-    doc.setFont(undefined, 'normal');
     
-    const severityLabels = {
-      high: "Alta Severidad",
-      medium: "Media Severidad",
-      low: "Baja Severidad"
-    };
+    addText("Informe de Accesibilidad Web", "title", true);
+    addText(date, "small", true);
+    yPosition += 10;
 
-    Object.entries(data.summary).forEach(([severity, count]) => {
-      yPosition = addWrappedText(
-        `${severityLabels[severity as keyof typeof severityLabels]}: ${count}`,
-        yPosition
-      );
-      yPosition += 3;
-    });
-    yPosition += sectionSpacing;
+    // Resumen general
+    addText("Resumen General", "subtitle");
+    addParagraph(`Puntuación de Accesibilidad: ${data.score}/100`, "normal");
+    addParagraph(`Nivel de Cumplimiento: ${getComplianceLevel(data.score)}`, "normal");
+    yPosition += 10;
 
-    // Problemas Detallados
-    doc.addPage();
-    yPosition = 20;
-    
-    const severityOrder: ("high" | "medium" | "low")[] = ["high", "medium", "low"];
-    
-    severityOrder.forEach(severity => {
-      const issuesOfSeverity = data.issues.filter(issue => issue.severity === severity);
-      
-      if (issuesOfSeverity.length > 0) {
+    // Resumen de problemas
+    addText("Resumen de Problemas", "subtitle");
+    if (data.summary.high > 0) {
+      addParagraph(`• Alta Severidad: ${data.summary.high} problemas`, "normal");
+    }
+    if (data.summary.medium > 0) {
+      addParagraph(`• Media Severidad: ${data.summary.medium} problemas`, "normal");
+    }
+    if (data.summary.low > 0) {
+      addParagraph(`• Baja Severidad: ${data.summary.low} problemas`, "normal");
+    }
+    yPosition += 10;
+
+    // Análisis detallado de problemas
+    addText("Análisis Detallado", "subtitle");
+
+    // Función para añadir problemas por severidad
+    const addIssuesBySeverity = (severity: "high" | "medium" | "low", title: string) => {
+      const issues = data.issues.filter(issue => issue.severity === severity);
+      if (issues.length > 0) {
         if (yPosition > doc.internal.pageSize.height - 50) {
           doc.addPage();
           yPosition = 20;
         }
-
-        doc.setFont(undefined, 'bold');
-        yPosition = addWrappedText(severityLabels[severity], yPosition, subtitleSize);
-        yPosition += 10;
-
-        issuesOfSeverity.forEach((issue, index) => {
+        addText(title, "subtitle");
+        issues.forEach((issue, index) => {
           if (yPosition > doc.internal.pageSize.height - 50) {
             doc.addPage();
             yPosition = 20;
           }
-
-          doc.setFont(undefined, 'bold');
-          yPosition = addWrappedText(`${index + 1}. ${issue.title}`, yPosition);
+          addParagraph(`${index + 1}. ${issue.title}`, "normal");
+          addParagraph(`Descripción: ${issue.description}`, "small");
+          addParagraph(`Solución: ${issue.solution}`, "small");
+          addParagraph(`Referencia WCAG: ${issue.wcagReference}`, "small");
           yPosition += 5;
-
-          doc.setFont(undefined, 'normal');
-          doc.setFontSize(smallSize);
-          
-          // Descripción
-          yPosition = addWrappedText(`Descripción: ${issue.description}`, yPosition, smallSize);
-          yPosition += 3;
-          
-          // Solución
-          yPosition = addWrappedText(`Solución: ${issue.solution}`, yPosition, smallSize);
-          yPosition += 3;
-          
-          // Referencia WCAG
-          yPosition = addWrappedText(`Referencia WCAG: ${issue.wcagReference}`, yPosition, smallSize);
-          yPosition += sectionSpacing;
         });
       }
-    });
+    };
 
-    // Pie de página en cada página
-    const totalPages = doc.internal.pages.length - 1;
+    addIssuesBySeverity("high", "Problemas de Alta Severidad");
+    addIssuesBySeverity("medium", "Problemas de Media Severidad");
+    addIssuesBySeverity("low", "Problemas de Baja Severidad");
+
+    // Plan de acción
+    if (yPosition > doc.internal.pageSize.height - 100) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    addText("Plan de Acción Recomendado", "subtitle");
+    addParagraph("Se recomienda abordar los problemas en el siguiente orden:", "normal");
+    
+    if (data.summary.high > 0) {
+      addParagraph(`1. Resolver los ${data.summary.high} problemas de alta severidad que afectan críticamante la accesibilidad.`, "normal");
+    }
+    if (data.summary.medium > 0) {
+      addParagraph(`2. Abordar los ${data.summary.medium} problemas de severidad media para mejorar la experiencia de usuario.`, "normal");
+    }
+    if (data.summary.low > 0) {
+      addParagraph(`3. Finalmente, corregir los ${data.summary.low} problemas de baja severidad para optimizar la accesibilidad.`, "normal");
+    }
+
+    // Pie de página
+    const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setFontSize(smallSize);
+      doc.setFontSize(styles.small.size);
       doc.setTextColor(128);
       doc.text(
         `Página ${i} de ${totalPages}`,
@@ -141,13 +134,20 @@ export function ReportDownload({ data }: ReportDownloadProps) {
       );
     }
 
-    // Guardar el PDF
-    doc.save("reporte-accesibilidad.pdf");
+    doc.save("informe-accesibilidad.pdf");
+  };
+
+  const getComplianceLevel = (score: number) => {
+    if (score >= 90) return "Excelente";
+    if (score >= 80) return "Bueno";
+    if (score >= 70) return "Aceptable";
+    if (score >= 60) return "Mejorable";
+    return "Crítico";
   };
 
   return (
     <Button
-      onClick={handleDownload}
+      onClick={generatePDF}
       className="bg-primary hover:bg-primary/90"
     >
       <Download className="mr-2 h-4 w-4" />
